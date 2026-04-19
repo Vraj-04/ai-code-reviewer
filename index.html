@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Code Reviewer</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0f1117;
+            --surface: #181c27;
+            --surface2: #1f2535;
+            --border: #2a3148;
+            --border2: #3a4460;
+            --text: #e8eaf2;
+            --text2: #8b93b0;
+            --text3: #555f7a;
+            --accent: #4f7cff;
+            --accent2: #7c5cfc;
+            --green: #3ddc97;
+            --red: #ff5f6d;
+            --font-display: 'Syne', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-display);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.2rem 2.5rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 17, 23, 0.95);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-logo {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(61, 220, 151, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(61, 220, 151, 0.25);
+            letter-spacing: 0.05em;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem 2.5rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .hero-tag {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 16px;
+            color: var(--text2);
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .main {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-red {
+            background: #ff5f57;
+        }
+
+        .dot-yellow {
+            background: #ffbd2e;
+        }
+
+        .dot-green {
+            background: #28c840;
+        }
+
+        .card-title {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text2);
+            margin-left: 4px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            padding: 16px 20px 0;
+            flex-wrap: wrap;
+        }
+
+        select {
+            font-family: var(--font-display);
+            font-size: 13px;
+            padding: 8px 12px;
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            background: var(--surface2);
+            color: var(--text);
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:hover,
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        .code-wrap {
+            padding: 16px 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.7;
+            padding: 14px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+        }
+
+        textarea::placeholder {
+            color: var(--text3);
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 20px 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            letter-spacing: 0.01em;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.88;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            font-family: var(--font-display);
+            font-size: 13px;
+            padding: 10px 16px;
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text2);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface2);
+        }
+
+        .char-info {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text3);
+            margin-left: auto;
+        }
+
+        .scores-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .score-card {
+            flex: 1;
+            min-width: 120px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        .score-label {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 6px;
+        }
+
+        .score-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .score-value span {
+            font-size: 14px;
+            color: var(--text3);
+            font-weight: 400;
+        }
+
+        .score-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.8s ease;
+        }
+
+        .result-card .card-header {
+            justify-content: space-between;
+        }
+
+        .badges {
+            display: flex;
+            gap: 6px;
+        }
+
+        .badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .badge-blue {
+            background: rgba(79, 124, 255, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(79, 124, 255, 0.3);
+        }
+
+        .badge-purple {
+            background: rgba(124, 92, 252, 0.15);
+            color: var(--accent2);
+            border: 1px solid rgba(124, 92, 252, 0.3);
+        }
+
+        .result-body {
+            padding: 20px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--text2);
+            white-space: pre-wrap;
+            min-height: 80px;
+        }
+
+        .result-body strong {
+            color: var(--text);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text3);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 8px 0;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: var(--red);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            padding: 0 20px 12px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text3);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            border-top: 1px solid var(--border);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-up {
+            animation: fadeUp 0.4s ease forwards;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <div class="nav-logo">CodeReview.AI</div>
+    </nav>
+
+    <div class="hero">
+        <span class="hero-tag">// AI-Powered Tool</span>
+        <h1>Smarter code,<br /><span>zero blind spots</span></h1>
+        <p>Paste your code and get instant feedback on bugs, security, performance, and best practices.</p>
+    </div>
+
+    <div class="main">
+
+        <div class="card">
+            <div class="card-header">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+                <span class="card-title" id="cardTitle">code_input.py</span>
+            </div>
+
+            <div class="controls">
+                <select id="lang">
+                    <option value="Python">Python</option>
+                    <option value="JavaScript">JavaScript</option>
+                    <option value="TypeScript">TypeScript</option>
+                    <option value="Java">Java</option>
+                    <option value="C++">C++</option>
+                    <option value="C#">C#</option>
+                    <option value="Go">Go</option>
+                    <option value="Rust">Rust</option>
+                    <option value="PHP">PHP</option>
+                    <option value="SQL">SQL</option>
+                    <option value="HTML/CSS">HTML/CSS</option>
+                    <option value="other">Other</option>
+                </select>
+                <select id="reviewType">
+                    <option value="full">Full review</option>
+                    <option value="bugs">Bugs only</option>
+                    <option value="security">Security</option>
+                    <option value="performance">Performance</option>
+                    <option value="style">Code style</option>
+                </select>
+            </div>
+
+            <div class="code-wrap">
+                <textarea id="codeInput"
+                    placeholder="# Paste your code here...&#10;&#10;def add(a, b):&#10;    return a + b"></textarea>
+            </div>
+
+            <div class="actions">
+                <button class="btn-primary" id="reviewBtn" onclick="reviewCode()">Review Code →</button>
+                <button class="btn-secondary" onclick="clearAll()">Clear</button>
+                <span class="char-info" id="charCount">0 chars</span>
+            </div>
+            <div class="error" id="errorMsg"></div>
+        </div>
+
+        <div id="resultSection" style="display:none">
+            <div class="scores-row" id="scoresRow"></div>
+            <div class="card result-card">
+                <div class="card-header">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div class="dot dot-green"></div>
+                        <span class="card-title" id="resultTitle">review_result.md</span>
+                    </div>
+                    <div class="badges">
+                        <span class="badge badge-blue" id="langBadge">Python</span>
+                        <span class="badge badge-purple" id="typeBadge">Full review</span>
+                    </div>
+                </div>
+                <div class="result-body" id="resultBody"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>SE Project &nbsp;·&nbsp; AI Code Reviewer</footer>
+
+    <script>
+        // ── CONFIG ─────────────────────────────────────────────────────────────────
+        // Get your FREE key from: https://aistudio.google.com/app/apikey
+        const API_KEY = 'AIzaSyBJPBq7JeSCPIT9g8OgVlmGPbWUFt01Yu8';
+
+        // Models tried in order — first one that works will be used
+        const MODELS = [
+            'gemini-2.5-flash',
+        ];
+        // ───────────────────────────────────────────────────────────────────────────
+
+        const codeInput = document.getElementById('codeInput');
+        const charCount = document.getElementById('charCount');
+        const resultBody = document.getElementById('resultBody');
+        const resultSection = document.getElementById('resultSection');
+        const reviewBtn = document.getElementById('reviewBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const cardTitle = document.getElementById('cardTitle');
+
+        const extMap = {
+            Python: 'py', JavaScript: 'js', TypeScript: 'ts', Java: 'java',
+            'C++': 'cpp', 'C#': 'cs', Go: 'go', Rust: 'rs',
+            PHP: 'php', SQL: 'sql', 'HTML/CSS': 'html', other: 'txt'
+        };
+
+        function updateCardTitle() {
+            cardTitle.textContent = 'code_input.' + (extMap[document.getElementById('lang').value] || 'txt');
+        }
+        codeInput.addEventListener('input', () => { charCount.textContent = codeInput.value.length + ' chars'; updateCardTitle(); });
+        document.getElementById('lang').addEventListener('change', updateCardTitle);
+
+        function clearAll() {
+            codeInput.value = ''; charCount.textContent = '0 chars';
+            resultSection.style.display = 'none'; errorMsg.textContent = ''; updateCardTitle();
+        }
+
+        function getPrompt(code, lang, type) {
+            const typeMap = {
+                full: 'Perform a full code review covering bugs, security issues, performance, code style, and best practices.',
+                bugs: 'Focus only on finding bugs, errors, and logical issues.',
+                security: 'Focus only on security vulnerabilities and potential exploits.',
+                performance: 'Focus only on performance issues and optimization opportunities.',
+                style: 'Focus only on code style, readability, naming, and best practices.'
+            };
+            return `You are an expert ${lang} code reviewer. ${typeMap[type]}
+
+Code to review (${lang}):
+\`\`\`${lang.toLowerCase()}
+${code}
+\`\`\`
+
+Respond in this exact format:
+
+SCORES (rate each 1-10):
+- Quality: X/10
+- Readability: X/10
+- Security: X/10
+
+SUMMARY:
+[2-3 sentence overall assessment]
+
+ISSUES FOUND:
+[List each issue with severity (HIGH/MEDIUM/LOW), description, and fix. Numbered list.]
+
+IMPROVEMENTS:
+[2-3 concrete improvements with code examples if helpful]
+
+Be specific, constructive, and actionable.`;
+        }
+
+        function parseScores(text) {
+            return {
+                quality: (text.match(/Quality:\s*(\d+)/i) || [])[1],
+                readability: (text.match(/Readability:\s*(\d+)/i) || [])[1],
+                security: (text.match(/Security:\s*(\d+)/i) || [])[1]
+            };
+        }
+
+        function scoreColor(v) { return v >= 8 ? '#3ddc97' : v >= 5 ? '#ffc93c' : '#ff5f6d'; }
+
+        function renderScores(scores) {
+            const row = document.getElementById('scoresRow');
+            if (!scores.quality) { row.innerHTML = ''; return; }
+            const items = [
+                { label: 'Quality', val: scores.quality },
+                { label: 'Readability', val: scores.readability },
+                { label: 'Security', val: scores.security }
+            ];
+            row.innerHTML = items.map(i => `
+      <div class="score-card fade-up">
+        <div class="score-label">${i.label}</div>
+        <div class="score-value" style="color:${scoreColor(+i.val)}">${i.val}<span>/10</span></div>
+        <div class="score-bar"><div class="score-fill" style="width:${i.val * 10}%;background:${scoreColor(+i.val)}"></div></div>
+      </div>`).join('');
+        }
+
+        function renderMarkdown(text) {
+            return text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^#{1,3} (.+)$/gm, '<strong style="color:var(--text);font-size:14px;">$1</strong>')
+                .replace(/^(\d+\.\s)/gm, '<span style="color:var(--accent)">$1</span>')
+                .replace(/^(- )/gm, '<span style="color:var(--accent)">• </span>')
+                .replace(/`([^`]+)`/g, '<code style="background:var(--border);padding:1px 5px;border-radius:4px;">$1</code>');
+        }
+
+        // Try each model in order until one succeeds
+        async function callGemini(prompt) {
+            let lastError = '';
+            for (const model of MODELS) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { maxOutputTokens: 1500, temperature: 0.4 }
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.error) { lastError = data.error.message; continue; } // try next model
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    if (!text) { lastError = 'Empty response'; continue; }
+                    return { text, model }; // success
+                } catch (e) {
+                    lastError = e.message;
+                }
+            }
+            throw new Error('All models failed. Last error: ' + lastError);
+        }
+
+        async function reviewCode() {
+            const code = codeInput.value.trim();
+            const lang = document.getElementById('lang').value;
+            const type = document.getElementById('reviewType').value;
+
+            if (!code) { errorMsg.textContent = 'Please paste some code first.'; return; }
+            errorMsg.textContent = '';
+
+            reviewBtn.disabled = true;
+            reviewBtn.textContent = 'Reviewing...';
+            resultSection.style.display = 'block';
+            document.getElementById('langBadge').textContent = lang;
+            document.getElementById('typeBadge').textContent = document.getElementById('reviewType').selectedOptions[0].text;
+            document.getElementById('scoresRow').innerHTML = '';
+            resultBody.innerHTML = '<div class="loading"><div class="spinner"></div> Analysing your code with Gemini AI...</div>';
+            document.getElementById('resultTitle').textContent = 'review_result.md';
+
+            try {
+                const { text, model } = await callGemini(getPrompt(code, lang, type));
+                renderScores(parseScores(text));
+                resultBody.innerHTML = renderMarkdown(text);
+                document.getElementById('resultTitle').textContent = 'review_complete.md';
+                resultBody.classList.add('fade-up');
+                
+            } catch (err) {
+                resultBody.innerHTML = `<span style="color:var(--red)">Error: ${err.message}</span>`;
+            } finally {
+                reviewBtn.disabled = false;
+                reviewBtn.textContent = 'Review Code →';
+            }
+        }
+    </script>
+</body>
+
+</html>
+
